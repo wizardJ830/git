@@ -495,7 +495,7 @@ static int ishead_and_reject_rebase_or_bisect_branch(const char *target)
 		struct worktree *wt = worktrees[i];
 
 		if (wt->head_ref && !strcmp(target, wt->head_ref))
-			ret = 1;
+			ret = 1 + (is_null_oid(&wt->head_oid) ? 1 : 0);
 
 		if (!wt->is_detached)
 			continue;
@@ -560,8 +560,7 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 		strbuf_addf(&logmsg, "Branch: renamed %s to %s",
 			    oldref.buf, newref.buf);
 
-	if (!copy &&
-	    (!head || strcmp(oldname, head) || !is_null_oid(&head_oid)) &&
+	if (!copy && !(ishead > 1) &&
 	    rename_ref(oldref.buf, newref.buf, logmsg.buf))
 		die(_("Branch rename failed"));
 	if (copy && copy_existing_ref(oldref.buf, newref.buf, logmsg.buf))
