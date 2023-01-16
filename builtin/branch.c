@@ -486,13 +486,16 @@ static void print_current_branch_name(void)
 		die(_("HEAD (%s) points outside of refs/heads/"), refname);
 }
 
-static void reject_rebase_or_bisect_branch(const char *target)
+static int ishead_and_reject_rebase_or_bisect_branch(const char *target)
 {
 	struct worktree **worktrees = get_worktrees();
-	int i;
+	int i, ret = 0;
 
 	for (i = 0; worktrees[i]; i++) {
 		struct worktree *wt = worktrees[i];
+
+		if (wt->head_ref && !strcmp(target, wt->head_ref))
+			ret = 1;
 
 		if (!wt->is_detached)
 			continue;
@@ -507,6 +510,7 @@ static void reject_rebase_or_bisect_branch(const char *target)
 	}
 
 	free_worktrees(worktrees);
+	return ret;
 }
 
 static void copy_or_rename_branch(const char *oldname, const char *newname, int copy, int force)
@@ -515,7 +519,7 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 	struct strbuf oldsection = STRBUF_INIT, newsection = STRBUF_INIT;
 	const char *interpreted_oldname = NULL;
 	const char *interpreted_newname = NULL;
-	int recovery = 0;
+	int recovery = 0, ishead;
 
 	if (strbuf_check_branch_ref(&oldref, oldname)) {
 		/*
@@ -544,7 +548,7 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 	else
 		validate_new_branchname(newname, &newref, force);
 
-	reject_rebase_or_bisect_branch(oldref.buf);
+	ishead = ishead_and_reject_rebase_or_bisect_branch(oldref.buf);
 
 	if (!skip_prefix(oldref.buf, "refs/heads/", &interpreted_oldname) ||
 	    !skip_prefix(newref.buf, "refs/heads/", &interpreted_newname)) {
@@ -574,7 +578,7 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 				interpreted_oldname);
 	}
 
-	if (!copy &&
+	if (!copy && ishead &&
 	    replace_each_worktree_head_symref(oldref.buf, newref.buf, logmsg.buf))
 		die(_("Branch renamed to %s, but HEAD is not updated!"), newname);
 
