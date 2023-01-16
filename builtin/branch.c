@@ -532,12 +532,12 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 			die(_("Invalid branch name: '%s'"), oldname);
 	}
 
-	if ((copy || strcmp(head, oldname)) && !ref_exists(oldref.buf)) {
-		if (copy && !strcmp(head, oldname))
-			die(_("No commit on branch '%s' yet."), oldname);
-		else
-			die(_("No branch named '%s'."), oldname);
-	}
+	ishead = ishead_and_reject_rebase_or_bisect_branch(oldref.buf);
+
+	if ((copy || !ishead) && !ref_exists(oldref.buf))
+		die(ishead
+		    ? _("No commit on branch '%s' yet.")
+		    : _("No branch named '%s'."), oldname);
 
 	/*
 	 * A command like "git branch -M currentbranch currentbranch" cannot
@@ -547,8 +547,6 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 		validate_branchname(newname, &newref);
 	else
 		validate_new_branchname(newname, &newref, force);
-
-	ishead = ishead_and_reject_rebase_or_bisect_branch(oldref.buf);
 
 	if (!skip_prefix(oldref.buf, "refs/heads/", &interpreted_oldname) ||
 	    !skip_prefix(newref.buf, "refs/heads/", &interpreted_newname)) {
@@ -810,7 +808,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 
 		strbuf_addf(&branch_ref, "refs/heads/%s", branch_name);
 		if (!ref_exists(branch_ref.buf))
-			error((!argc || !strcmp(head, branch_name))
+			error((!argc || branch_checked_out(branch_ref.buf))
 			      ? _("No commit on branch '%s' yet.")
 			      : _("No branch named '%s'."),
 			      branch_name);
@@ -854,11 +852,10 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 			die(_("no such branch '%s'"), argv[0]);
 		}
 
-		if (!ref_exists(branch->refname)) {
-			if (!argc || !strcmp(head, branch->name))
-				die(_("No commit on branch '%s' yet."), branch->name);
-			die(_("branch '%s' does not exist"), branch->name);
-		}
+		if (!ref_exists(branch->refname))
+			die((!argc || branch_checked_out(branch->refname))
+			    ? _("No commit on branch '%s' yet.")
+			    : _("branch '%s' does not exist"), branch->name);
 
 		dwim_and_setup_tracking(the_repository, branch->name,
 					new_upstream, BRANCH_TRACK_OVERRIDE,
