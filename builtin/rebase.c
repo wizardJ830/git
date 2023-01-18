@@ -1835,6 +1835,7 @@ cleanup:
 	free(options.gpg_sign_opt);
 	free(options.cmd);
 	free(options.strategy);
+	free(options.strategy_opts);
 	strbuf_release(&options.git_format_patch_opt);
 	free(squash_onto_name);
 	free(keep_base_onto_name);
