@@ -301,6 +301,7 @@ static int do_interactive_rebase(struct rebase_options *opts, unsigned flags)
 	}
 
 cleanup:
+	replay_opts_release(&replay);
 	string_list_clear(&commands, 0);
 	free(revisions);
 	free(shortrevisions);
@@ -343,6 +344,7 @@ static int run_sequencer_rebase(struct rebase_options *opts)
 		struct replay_opts replay_opts = get_replay_opts(opts);
 
 		ret = sequencer_continue(the_repository, &replay_opts);
+		replay_opts_release(&replay_opts);
 		break;
 	}
 	case ACTION_EDIT_TODO:
@@ -558,6 +560,7 @@ static int finish_rebase(struct rebase_options *opts)
 
 		replay.action = REPLAY_INTERACTIVE_REBASE;
 		ret = sequencer_remove_state(&replay);
+		replay_opts_release(&replay);
 	} else {
 		strbuf_addstr(&dir, opts->state_dir);
 		if (remove_dir_recursively(&dir, 0))
@@ -1331,6 +1334,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 
 			replay.action = REPLAY_INTERACTIVE_REBASE;
 			ret = sequencer_remove_state(&replay);
+			replay_opts_release(&replay);
 		} else {
 			strbuf_reset(&buf);
 			strbuf_addstr(&buf, options.state_dir);
